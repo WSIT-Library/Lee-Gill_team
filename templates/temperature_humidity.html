@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>온도 및 습도</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #e0f7fa; /* 밝은 배경 색상 */
+            position: relative;
+            overflow: hidden;
+            font-size: 16px; /* 기본 폰트 크기 조정 */
+        }
+        h1 {
+            color: #0c5460;
+            font-size: 28px; /* 기본 제목 크기 */
+        }
+        .chart {
+            width: 100%;
+            height: 500px; /* 기본 높이: PC에 맞춤 */
+        }
+
+        @media (max-width: 767px) {
+            .chart {
+                height: 300px; /* 모바일 높이 */
+            }
+            h1 {
+                font-size: 24px; /* 모바일에서 제목 크기 조정 */
+            }
+        }
+
+        @media (orientation: portrait) and (max-width: 767px) {
+            .chart {
+                height: 350px; /* 세로 모드에서 높이 조정 */
+            }
+        }
+
+        @media (orientation: landscape) and (max-width: 767px) {
+            .chart {
+                height: 400px; /* 가로 모드에서 높이 조정 */
+            }
+        }
+
+        .wave {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 45%;
+            animation: wave-animation 4s ease-in-out infinite;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @keyframes wave-animation {
+            0% {
+                transform: translate(0, 0);
+            }
+            50% {
+                transform: translate(-30%, -30%);
+            }
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: rise 1.5s forwards;
+        }
+
+        @keyframes rise {
+            0% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100vh);
+                opacity: 0;
+            }
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body onclick="createBubble(event)">
+    <div class="wave"></div>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">환경 모니터링</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/temperature_humidity">온도 및 습도</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/noise">소음</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dust">미세먼지</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/fu">예측 온도 및 습도</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="loading" class="spinner-border" role="status">
+        <span class="visually-hidden">로딩 중...</span>
+    </div>
+
+    <div class="container">
+        <h1 class="text-center" id="chartTitle">온도 그래프</h1>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="temperature-tab" data-bs-toggle="tab" href="#temperature" role="tab" aria-controls="temperature" aria-selected="true">온도</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="humidity-tab" data-bs-toggle="tab" href="#humidity" role="tab" aria-controls="humidity" aria-selected="false">습도</a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="temperature" role="tabpanel" aria-labelledby="temperature-tab">
+                <div id="temperatureChart" class="chart"></div>
+            </div>
+            <div class="tab-pane fade" id="humidity" role="tabpanel" aria-labelledby="humidity-tab">
+                <div id="humidityChart" class="chart"></div>
+            </div>
+        </div>
+
+        <h2 class="mt-4">해결책 및 제안</h2>
+        <div id="solution" class="alert alert-info" role="alert"></div>
+    </div>
+
+    <script>
+        function createTemperatureChart(data) {
+            const trace = {
+                x: data.labels,
+                y: data.temperature,
+                type: 'scatter',
+                mode: 'lines',
+                name: '온도 (°C)',
+                line: { color: 'rgba(255, 99, 132, 1)', width: 2 }
+            };
+
+            const layout = {
+                title: '온도',
+                xaxis: { title: '시간', type: 'date' },
+                yaxis: { title: '온도 (°C)', autorange: true },
+                height: getChartHeight(),
+                dragmode: 'zoom',
+                responsive: true
+            };
+
+            Plotly.newPlot('temperatureChart', [trace], layout);
+        }
+
+        function createHumidityChart(data) {
+            const trace = {
+                x: data.labels,
+                y: data.humidity,
+                type: 'scatter',
+                mode: 'lines',
+                name: '습도 (%)',
+                line: { color: 'rgba(54, 162, 235, 1)', width: 2 }
+            };
+
+            const layout = {
+                title: '습도',
+                xaxis: { title: '시간', type: 'date' },
+                yaxis: { title: '습도 (%)', autorange: true },
+                height: getChartHeight(),
+                dragmode: 'zoom',
+                responsive: true
+            };
+
+            Plotly.newPlot('humidityChart', [trace], layout);
+        }
+
+        function getChartHeight() {
+            return window.innerWidth < 768 ? 300 : 500; // 화면 크기에 따라 높이 조정
+        }
+
+        function displaySolutions(data) {
+            const temperatureAvg = data.temperature_avg;
+            const humidityAvg = data.humidity_avg;
+
+            let temperatureSolution = '';
+            let humiditySolution = '';
+
+            if (temperatureAvg !== undefined && temperatureAvg !== null) {
+                if (temperatureAvg < 18) {
+                    temperatureSolution = "실내 온도가 너무 낮습니다. 난방기를 사용하세요.";
+                } else if (temperatureAvg <= 24) {
+                    temperatureSolution = "실내 온도가 적절합니다. 현재 상태를 유지하세요.";
+                } else {
+                    temperatureSolution = "실내 온도가 너무 높습니다. 에어컨을 사용하세요.";
+                }
+            } else {
+                temperatureSolution = "온도 데이터가 없습니다.";
+            }
+
+            if (humidityAvg !== undefined && humidityAvg !== null) {
+                if (humidityAvg < 30) {
+                    humiditySolution = "실내 습도가 너무 낮습니다. 가습기를 사용하세요.";
+                } else if (humidityAvg <= 60) {
+                    humiditySolution = "실내 습도가 적절합니다. 현재 상태를 유지하세요.";
+                } else {
+                    humiditySolution = "실내 습도가 너무 높습니다. 제습기를 사용하세요.";
+                }
+            } else {
+                humiditySolution = "습도 데이터가 없습니다.";
+            }
+
+            document.getElementById('solution').innerText = 
+                `최근 1시간 온도 평균: ${temperatureAvg !== undefined && temperatureAvg !== null ? temperatureAvg.toFixed(2) : '데이터 없음'} °C. ${temperatureSolution}\n` +
+                `최근 1시간 습도 평균: ${humidityAvg !== undefined && humidityAvg !== null ? humidityAvg.toFixed(2) : '데이터 없음'} %. ${humiditySolution}`;
+        }
+
+        function fetchData() {
+            document.getElementById('loading').style.display = 'block'; // 로딩 스피너 표시
+            fetch('/data')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('네트워크 응답이 좋지 않습니다.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    createTemperatureChart(data);
+                    createHumidityChart(data);
+                    displaySolutions(data);
+                    document.getElementById('loading').style.display = 'none'; // 로딩 스피너 숨기기
+                })
+                .catch(error => {
+                    console.error('데이터 가져오기 실패:', error);
+                    document.getElementById('solution').innerText = "데이터를 가져오는 데 실패했습니다. 다시 시도해 주세요.";
+                    document.getElementById('loading').style.display = 'none'; // 로딩 스피너 숨기기
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData(); // 페이지가 로드된 후 데이터 가져오기
+
+            // 탭 클릭 이벤트 리스너 추가
+            const tabs = document.querySelectorAll('.nav-link');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (event) => {
+                    const selectedTab = event.target.getAttribute('href').substring(1);
+                    // 제목 변경
+                    const title = selectedTab === 'temperature' ? '온도 그래프' : '습도 그래프';
+                    document.getElementById('chartTitle').innerText = title;
+                });
+            });
+
+            // 화면 크기 변경 시 차트 업데이트
+            window.addEventListener('resize', () => {
+                fetchData();
+            });
+        });
+
+        function createBubble(event) {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.style.width = `${Math.random() * 30 + 10}px`; // 랜덤 크기
+            bubble.style.left = `${event.clientX}px`; // 클릭 위치
+            bubble.style.bottom = '0'; // 시작 위치
+            document.body.appendChild(bubble);
+
+            // 애니메이션이 끝난 후 물방울 제거
+            bubble.addEventListener('animationend', () => {
+                bubble.remove();
+            });
+        }
+    </script>
+</body>
+</html>
+

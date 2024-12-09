@@ -1,0 +1,107 @@
+#include <DHT.h>
+#include <SoftwareSerial.h>  // SoftwareSerial 라이브러리 추가
+
+#define DHTPIN 7          // DHT11이 연결된 핀
+#define DHTTYPE DHT11     // DHT11 센서 유형
+
+#define SOUND_SENSOR_PIN A0  // 사운드 센서가 연결된 핀
+#define LED1_PIN 13         // LED 1이 연결된 핀 (사운드 센서용)
+#define LED2_PIN 12         // LED 2가 연결된 핀 (DHT11 및 미세먼지 센서용)
+
+#define DUST_SENSOR_PIN A1  // 미세먼지 센서가 연결된 핀
+
+// 블루투스 모듈을 위한 핀 정의 (SoftwareSerial 사용)
+#define RX_PIN 3            // 블루투스 RXD 핀
+#define TX_PIN 2            // 블루투스 TXD 핀
+
+SoftwareSerial bluetooth(TX_PIN, RX_PIN);  // 블루투스 통신 설정
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  // 하드웨어 시리얼과 블루투스 시리얼 설정
+  Serial.begin(9600);       // 하드웨어 시리얼 (모니터링용)
+  bluetooth.begin(9600);    // 블루투스 시리얼
+
+  // 센서 및 LED 핀 설정
+  pinMode(SOUND_SENSOR_PIN, INPUT);
+  pinMode(LED1_PIN, OUTPUT); // 사운드 센서에 대한 LED
+  pinMode(LED2_PIN, OUTPUT); // DHT11 및 미세먼지 센서에 대한 LED
+
+  // DHT11 센서 시작
+  dht.begin();
+
+  Serial.println("시스템 초기화 완료.");
+  bluetooth.println("Bluetooth 연결 성공! 시스템 초기화 완료.");
+}
+
+void loop() {
+  // 사운드 센서 값 읽기
+  int soundValue = analogRead(SOUND_SENSOR_PIN);
+
+  // 사운드 값을 백분율로 변환
+  float soundPercentage = (soundValue / 1023.0) * 100;
+
+  // DHT11에서 온도와 습도 읽기
+  float temperature = dht.readTemperature();  // 온도 읽기
+  float humidity = dht.readHumidity();        // 습도 읽기
+
+  // DHT11 센서 데이터가 유효한지 확인
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("DHT11 센서 오류");
+    bluetooth.println("DHT11 센서 오류");
+    return;
+  }
+
+  // 미세먼지 값 읽기
+  int dust_value = analogRead(DUST_SENSOR_PIN);
+  float dustDensityug = (0.17 * (dust_value * (5.0 / 1024.0)) - 0.1) * 1000; // 미세먼지 농도 계산
+
+  // JSON 객체로 데이터 전송
+  String jsonData = "{";
+  jsonData += "\"sound_value\": " + String(soundValue) + ",";
+  jsonData += "\"sound_percentage\": " + String(soundPercentage, 1) + ",";
+  jsonData += "\"temperature\": " + String(temperature) + ",";
+  jsonData += "\"humidity\": " + String(humidity) + ",";
+  jsonData += "\"humidity_status\": \"" + (humidity > 60 ? String("높음") : String("정상")) + "\",";
+  jsonData += "\"dust_density\": " + String(dustDensityug);
+  jsonData += "}";
+
+  // 시리얼 모니터에 출력
+  Serial.println(jsonData);
+  
+  // 블루투스 모듈로 JSON 데이터 전송
+  bluetooth.println(jsonData);
+
+  // 사운드 센서 값이 600 이상일 경우 LED1(13번 핀) 켜기
+  if (soundValue > 600) {
+    digitalWrite(LED1_PIN, HIGH);
+    Serial.println("사운드 감지: LED1 켜짐");
+  } else {
+    digitalWrite(LED1_PIN, LOW);
+  }
+
+  // 온도가 30도 이상일 경우 LED1 깜빡이기
+  if (temperature > 30) {
+    blinkLED(LED1_PIN, 500);  // 500ms 간격으로 LED 깜빡임
+  }
+
+  // 습도가 60% 이상이거나 미세먼지 값이 35μg/m³ 이상일 경우 LED2 켜기
+  if (humidity > 60 || dustDensityug > 35) {
+    digitalWrite(LED2_PIN, HIGH);
+    Serial.println("습도 또는 미세먼지 높음: LED2 켜짐");
+  } else {
+    digitalWrite(LED2_PIN, LOW);
+  }
+
+  // 데이터를 10초마다 업데이트
+  delay(10000);
+}
+
+// LED 깜빡이기 함수
+void blinkLED(int pin, int interval) {
+  digitalWrite(pin, HIGH);  // LED 켜기
+  delay(interval);
+  digitalWrite(pin, LOW);   // LED 끄기
+  delay(interval);
+}

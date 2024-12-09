@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, shrink-to-fit=no" />
+    <title>실내 환경 데이터 시각화</title>
+
+    <!-- 부트스트랩 CSS (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome (CDN) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" type="text/css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700|Poppins:200,300,400,600,700,800" rel="stylesheet" type="text/css">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #000000, #003366); /* 검정색과 푸른색 그라데이션 */
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 1); /* 네온 효과 */
+        }
+        .description {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.5); /* 네온 효과 */
+        }
+        .btn {
+            width: 200px;
+            margin: 10px; /* 버튼 간 여백 */
+            transition: transform 0.2s, box-shadow 0.2s; /* 호버 효과에 그림자 추가 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* 네온 효과 */
+            border: none; /* 버튼 테두리 없앰 */
+            position: relative; /* 그림자 효과를 위한 상대적 위치 */
+        }
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 5px;
+            background: rgba(0, 255, 255, 0.2); /* 버튼 배경색 */
+            filter: blur(10px);
+            z-index: -1; /* 버튼 뒤로 */
+            transition: opacity 0.2s;
+        }
+        .btn:hover:before {
+            opacity: 1; /* 호버 시 배경 밝게 */
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 1); /* 호버 시 그림자 */
+        }
+        .btn i {
+            margin-right: 8px; /* 아이콘과 텍스트 간격 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center my-5"> <!-- 상하 여백 추가 -->
+        <h1 class="my-4">실내 환경 데이터 시각화</h1> <!-- 제목과 여백 -->
+        <p class="description mb-4">온도, 습도, 소음 및 미세먼지 데이터를 실시간으로 확인하고, 건강한 실내 환경을 유지하세요.</p>
+        <div class="d-flex justify-content-center flex-wrap"> <!-- 버튼을 중앙에 배치 -->
+            <a href="/temperature_humidity" class="btn btn-danger mx-2" aria-label="온도 및 습도">
+                <i class="fas fa-thermometer-half"></i> 온도 및 습도
+            </a>
+            <a href="/noise" class="btn btn-info mx-2" aria-label="소음">
+                <i class="fas fa-volume-up"></i> 소음
+            </a>
+            <a href="/dust" class="btn btn-warning mx-2" aria-label="미세먼지">
+                <i class="fas fa-tint"></i> 미세먼지
+            </a>
+            <a href="/fu" class="btn btn-success mx-2" aria-label="예측 온도 및 습도">
+                <i class="fas fa-chart-line"></i> 예측 온도 및 습도
+            </a>
+        </div>
+    </div>
+
+    <!-- 부트스트랩 JS (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
